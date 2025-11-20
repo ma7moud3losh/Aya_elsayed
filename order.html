@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إتمام الطلب — AYA Beauty</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body{font-family:'Tajawal',sans-serif;background:#faf7fb;margin:0;padding:20px;color:#333}
+.container{max-width:600px;margin:auto;background:white;padding:20px;border-radius:16px;box-shadow:0 5px 20px rgba(0,0,0,0.08)}
+h2{text-align:center;margin-bottom:20px}
+input,textarea{
+  width:100%;padding:10px;margin:8px 0;border:1px solid #ddd;border-radius:8px;font-size:15px;
+}
+.btn{
+  width:100%;padding:12px;border:none;border-radius:10px;background:#ff4f9d;color:white;
+  font-size:17px;font-weight:bold;margin-top:10px;cursor:pointer;
+}
+.cart-item{background:#f5f5f5;padding:10px;border-radius:10px;margin-bottom:10px}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <h2>إتمام الطلب</h2>
+
+  <div id="cartItems"></div>
+
+  <hr>
+
+  <h3>بيانات التوصيل</h3>
+
+  <input id="name" type="text" placeholder="الاسم بالكامل">
+  <input id="phone" type="text" placeholder="رقم الهاتف">
+  <textarea id="address" placeholder="العنوان بالتفصيل"></textarea>
+
+  <button class="btn" onclick="sendOrder()">إرسال الطلب</button>
+
+</div>
+
+
+<script>
+// Supabase
+const supabase = window.supabase.createClient(
+  "https://qccpddjnozehorhleegz.supabase.co",
+  "sb_publishable_rSdFTm7TUh-HDRLKacdZxw_BpQOTeIr"
+);
+
+// تحميل السلة داخل صفحة الطلب
+function loadCartForOrder() {
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  let box = document.getElementById("cartItems");
+
+  if (cart.length === 0) {
+    box.innerHTML = "<p style='color:#777;text-align:center'>السلة فارغة</p>";
+    return;
+  }
+
+  box.innerHTML = "<h3>المنتجات</h3>";
+
+  cart.forEach(item => {
+    box.innerHTML += `
+      <div class="cart-item">
+        <strong>${item.name}</strong><br>
+        السعر: ${item.price} جنيه<br>
+        الكمية: ${item.qty}
+      </div>
+    `;
+  });
+}
+
+loadCartForOrder();
+
+
+// ارسال الطلب
+async function sendOrder() {
+  const name = document.getElementById("name").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+  const address = document.getElementById("address").value.trim();
+
+  if (!name || !phone || !address) {
+    alert("من فضلك أكمل جميع البيانات");
+    return;
+  }
+
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+  if (cart.length === 0) {
+    alert("السلة فارغة!");
+    return;
+  }
+
+  // تجهيز كل المنتجات في شكل صفوف للقاعدة
+  const orders = cart.map(item => ({
+    product_id: item.id,
+    quantity: item.qty,
+    name,
+    phone,
+    address
+  }));
+
+  const { error } = await supabase.from("orders").insert(orders);
+
+  if (error) {
+    console.log(error);
+    alert("حدث خطأ أثناء إرسال الطلب");
+    return;
+  }
+
+  localStorage.removeItem("cart");
+
+  alert("تم إرسال طلبك بنجاح ❤️");
+  location.href = "index.html";
+}
+</script>
+
+</body>
+</html>
+  

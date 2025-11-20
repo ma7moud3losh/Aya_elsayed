@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<title>السلة — AYA</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+body{font-family:'Tajawal';background:#faf7fb;margin:0;padding:20px;color:#333}
+h2{text-align:center;margin-bottom:20px}
+
+.cart-item{
+  display:flex;
+  background:white;
+  padding:12px;
+  border-radius:12px;
+  margin-bottom:12px;
+  gap:12px;
+  box-shadow:0 3px 12px rgba(0,0,0,0.08);
+}
+.cart-item img{
+  width:100px;height:100px;border-radius:10px;object-fit:cover;
+}
+.info{flex:1}
+.qty{
+  display:flex;
+  gap:6px;
+  align-items:center;
+  margin:8px 0;
+}
+.qty button{
+  width:28px;height:28px;font-weight:bold;border:none;background:#ff4f9d;color:#fff;border-radius:6px;cursor:pointer;
+}
+.remove-btn{
+  background:#ddd;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;
+}
+.total-box{
+  margin-top:20px;
+  font-size:20px;
+  font-weight:bold;
+  text-align:center;
+}
+.checkout-btn{
+  width:100%;
+  background:#ff4f9d;
+  padding:12px;
+  border:none;
+  margin-top:15px;
+  color:white;
+  border-radius:10px;
+  font-size:17px;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🛒 السلة</h2>
+
+<div id="cart-list"></div>
+
+<div class="total-box">الإجمالي: <span id="total">0</span> جنيه</div>
+
+<button class="checkout-btn" onclick="goCheckout()">إتمام الطلب</button>
+
+<script>
+function loadCart(){
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  const box = document.getElementById("cart-list");
+  let total = 0;
+
+  if(cart.length === 0){
+    box.innerHTML = "<p style='text-align:center;color:#777'>السلة فارغة</p>";
+    document.getElementById("total").innerHTML = 0;
+    return;
+  }
+
+  box.innerHTML = "";
+  cart.forEach((item, i)=>{
+    total += item.qty * item.price;
+
+    box.innerHTML += `
+      <div class="cart-item">
+        <img src="${item.image}">
+        <div class="info">
+          <h4>${item.name}</h4>
+          <p>${item.price} جنيه</p>
+
+          <div class="qty">
+            <button onclick="changeQty(${i}, 1)">+</button>
+            <span style="font-size:18px">${item.qty}</span>
+            <button onclick="changeQty(${i}, -1)">-</button>
+          </div>
+
+          <button class="remove-btn" onclick="removeItem(${i})">حذف</button>
+        </div>
+      </div>
+    `;
+  });
+
+  document.getElementById("total").innerHTML = total;
+}
+
+function changeQty(i, change){
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  cart[i].qty += change;
+  if(cart[i].qty <= 0) cart.splice(i,1);
+  localStorage.setItem("cart", JSON.stringify(cart));
+  loadCart();
+}
+
+function removeItem(i){
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  cart.splice(i,1);
+  localStorage.setItem("cart", JSON.stringify(cart));
+  loadCart();
+}
+
+function goCheckout(){
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  if(cart.length === 0){
+    alert("السلة فارغة!");
+    return;
+  }
+  location.href = "order.html";
+}
+
+loadCart();
+</script>
+
+</body>
+</html>

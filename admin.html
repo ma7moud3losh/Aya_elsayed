@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة الطلبات - AYA</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+body{font-family:'Tajawal',sans-serif;background:#faf7fb;margin:0}
+.container{max-width:1100px;margin:30px auto;padding:16px}
+h2{margin:0 0 20px}
+.table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}
+.table th,.table td{padding:14px;border-bottom:1px solid #eee;text-align:right;font-size:15px}
+.table th{background:#ff4f9d;color:white}
+.empty{text-align:center;padding:40px;color:#777}
+.btn-del{
+  background:#ff2e63;color:#fff;padding:6px 10px;border:none;border-radius:8px;cursor:pointer;
+}
+.status-select{
+  padding:6px 10px;border:1px solid #ddd;border-radius:8px;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+<h2>📦 إدارة الطلبات</h2>
+
+<table class="table">
+<thead>
+<tr>
+<th>العميل</th>
+<th>الهاتف</th>
+<th>العنوان</th>
+<th>المنتج</th>
+<th>الحالة</th>
+<th>تحديث</th>
+<th>حذف</th>
+<th>التاريخ</th>
+</tr>
+</thead>
+<tbody id="orders-body">
+<tr><td colspan="8" class="empty">جاري تحميل الطلبات...</td></tr>
+</tbody>
+</table>
+</div>
+
+<script>
+// =========================
+// Supabase
+// =========================
+const supabaseUrl = "https://qccpddjnozehorhleegz.supabase.co";
+const supabaseKey = "sb_publishable_rSdFTm7TUh-HDRLKacdZxw_BpQOTeIr";
+const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+// =========================
+// Load Orders
+// =========================
+async function loadOrders(){
+  const tbody = document.getElementById("orders-body");
+
+  const { data, error } = await client
+    .from("orders")
+    .select(`*, products(name)`)
+    .order("created_at", { ascending:false });
+
+  if(error){
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">⚠ خطأ أثناء تحميل الطلبات</td></tr>`;
+    return;
+  }
+
+  if(!data || data.length === 0){
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">لا توجد طلبات</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = "";
+  data.forEach(o=>{
+    tbody.innerHTML += `
+      <tr>
+        <td>${o.name}</td>
+        <td>${o.phone}</td>
+        <td>${o.address}</td>
+        <td>${o.products?.name || "—"}</td>
+
+        <td>
+          <select id="status-${o.id}" class="status-select">
+            <option value="قيد التجهيز" ${o.status==="قيد التجهيز"?"selected":""}>قيد التجهيز</option>
+            <option value="تم الشحن" ${o.status==="تم الشحن"?"selected":""}>تم الشحن</option>
+            <option value="مكتمل" ${o.status==="مكتمل"?"selected":""}>مكتمل</option>
+            <option value="ملغي" ${o.status==="ملغي"?"selected":""}>ملغي</option>
+          </select>
+        </td>
+
+        <td>
+          <button onclick="updateStatus('${o.id}')" class="btn-del" style="background:#4caf50">✔ تحديث</button>
+        </td>
+
+        <td>
+          <button onclick="deleteOrder('${o.id}')" class="btn-del">🗑 حذف</button>
+        </td>
+
+        <td>${new Date(o.created_at).toLocaleString('ar-EG')}</td>
+      </tr>
+    `;
+  });
+}
+
+// =========================
+// Update Status
+// =========================
+async function updateStatus(id, newStatus) {
+  const { data, error } = await supabase
+    .from("orders")
+    .update({ status: newStatus })
+    .eq("id", id);
+
+  if (error) {
+    console.error(error);
+    alert("❌ لم يتم التحديث");
+    return;
+  }
+
+  alert("✔ تم تحديث حالة الطلب بنجاح");
+  loadOrders(); // إعادة تحميل الطلبات بعد التحديث
+}     
+// =========================
+// Delete Order
+// =========================
+async function deleteOrder(id){
+  if(!confirm("هل تريد حذف هذا الطلب؟")) return;
+
+  const { error } = await client
+    .from("orders")
+    .delete()
+    .eq("id", id);
+
+  if(error){
+    alert("❌ فشل الحذف");
+  } else {
+    alert("🗑 تم حذف الطلب");
+    loadOrders();
+  }
+}
+
+loadOrders();
+</script>
+
+</body>
+</html>
