@@ -35,6 +35,8 @@ h2{margin:0 0 20px}
 <th>الهاتف</th>
 <th>العنوان</th>
 <th>المنتج</th>
+<th>السعر</th>
+<th>الإجمالي</th>
 <th>الحالة</th>
 <th>تحديث</th>
 <th>حذف</th>
@@ -79,32 +81,35 @@ async function loadOrders(){
   tbody.innerHTML = "";
   data.forEach(o=>{
     tbody.innerHTML += `
-      <tr>
-        <td>${o.name}</td>
-        <td>${o.phone}</td>
-        <td>${o.address}</td>
-        <td>${o.products?.name || "—"}</td>
+  <tr>
+    <td>${o.name}</td>
+    <td>${o.phone}</td>
+    <td>${o.address}</td>
 
-        <td>
-          <select id="status-${o.id}" class="status-select">
-            <option value="قيد التجهيز" ${o.status==="قيد التجهيز"?"selected":""}>قيد التجهيز</option>
-            <option value="تم الشحن" ${o.status==="تم الشحن"?"selected":""}>تم الشحن</option>
-            <option value="مكتمل" ${o.status==="مكتمل"?"selected":""}>مكتمل</option>
-            <option value="ملغي" ${o.status==="ملغي"?"selected":""}>ملغي</option>
-          </select>
-        </td>
+    <td>${o.products?.name || "—"}</td>
+    <td>${o.products?.price || 0} جنيه</td>
+    <td>${o.products?.price || 0} جنيه</td>
 
-        <td>
-          <button onclick="updateStatus('${o.id}')" class="btn-del" style="background:#4caf50">✔ تحديث</button>
-        </td>
+    <td>
+      <select id="status-${o.id}" class="status-select">
+        <option value="قيد التجهيز" ${o.status==="قيد التجهيز"?"selected":""}>قيد التجهيز</option>
+        <option value="تم الشحن" ${o.status==="تم الشحن"?"selected":""}>تم الشحن</option>
+        <option value="مكتمل" ${o.status==="مكتمل"?"selected":""}>مكتمل</option>
+        <option value="ملغي" ${o.status==="ملغي"?"selected":""}>ملغي</option>
+      </select>
+    </td>
 
-        <td>
-          <button onclick="deleteOrder('${o.id}')" class="btn-del">🗑 حذف</button>
-        </td>
+    <td>
+      <button onclick="updateStatus('${o.id}')" class="btn-del" style="background:#4caf50">✔ تحديث</button>
+    </td>
 
-        <td>${new Date(o.created_at).toLocaleString('ar-EG')}</td>
-      </tr>
-    `;
+    <td>
+      <button onclick="deleteOrder('${o.id}')" class="btn-del">🗑 حذف</button>
+    </td>
+
+    <td>${new Date(o.created_at).toLocaleString('ar-EG')}</td>
+  </tr>
+`;
   });
 }
 
