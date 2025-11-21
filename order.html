@@ -96,16 +96,30 @@ async function sendOrder() {
     return;
   }
 
-  // تجهيز كل المنتجات في شكل صفوف للقاعدة
-  const orders = cart.map(item => ({
-    product_id: item.id,
-    quantity: item.qty,
-    name,
-    phone,
-    address
+  // تجهيز المنتجات
+  const items = cart.map(i => ({
+    id: i.id,
+    name: i.name,
+    price: i.price,
+    qty: i.qty
   }));
 
-  const { error } = await supabase.from("orders").insert(orders);
+  // حساب الإجمالي
+  const total_price = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
+
+  // إجمالي الكمية
+  const quantity = cart.reduce((sum, i) => sum + i.qty, 0);
+
+  // إرسال الطلب
+  const { error } = await supabase.from("orders").insert({
+    name,
+    phone,
+    address,
+    items,
+    total_price,
+    quantity,
+    status: "قيد التجهيز"
+  });
 
   if (error) {
     console.log(error);
@@ -114,7 +128,6 @@ async function sendOrder() {
   }
 
   localStorage.removeItem("cart");
-
   alert("تم إرسال طلبك بنجاح ❤️");
   location.href = "index.html";
 }
