@@ -107,11 +107,10 @@ async function sendOrder() {
     name,
     phone,
     address,
-    quantity: totalQty,
-    total_price: totalPrice,
-    status: "pending",
-    items: cart  // JSON
-  };
+    items: cart,       // <-- هنا كل المنتجات + الكمية
+    total_price: cart.reduce((t, x) => t + (x.price * x.qty), 0),
+    status: "قيد التجهيز"
+};
 
   const { error } = await supabase
     .from("orders")

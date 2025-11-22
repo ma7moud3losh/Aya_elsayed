@@ -23,10 +23,13 @@ h2{margin:0 0 20px}
 }
 </style>
 </head>
+
 <body>
 
 <div class="container">
 <h2>📦 إدارة الطلبات</h2>
+
+<h3>عدد الطلبات: <span id="ordersCount">0</span></h3>
 
 <table class="table">
 <thead>
@@ -62,13 +65,22 @@ const client = window.supabase.createClient(supabaseUrl, supabaseKey);
 async function loadOrders(){
   const tbody = document.getElementById("orders-body");
 
+  // جلب عدد الطلبات
+  const countQuery = await client
+    .from('orders')
+    .select('*', { count: 'exact', head: true });
+
+  document.getElementById("ordersCount").textContent = countQuery.count || 0;
+
+  // جلب الطلبات
   const { data, error } = await client
-    .from("orders")
+    .from('orders')
     .select("*")
-    .order("created_at", { ascending:false });
+    .order('created_at', { ascending: false });
 
   if(error){
     tbody.innerHTML = `<tr><td colspan="9" class="empty">⚠ خطأ أثناء تحميل الطلبات</td></tr>`;
+    console.error(error);
     return;
   }
 
@@ -84,13 +96,11 @@ async function loadOrders(){
 
     if (Array.isArray(o.items)) {
       productsHtml = o.items.map(i => `
-        <div>
-          ${i.name} — ${i.price} × ${i.qty}
-        </div>
+        <div>${i.name} — ${i.price} × ${i.qty}</div>
       `).join("");
     }
 
-tbody.innerHTML += `
+    tbody.innerHTML += `
 <tr>
   <td>${o.name}</td>
   <td>${o.phone}</td>
@@ -118,8 +128,7 @@ tbody.innerHTML += `
   </td>
 
   <td>${new Date(o.created_at).toLocaleString('ar-EG')}</td>
-</tr>
-`;
+</tr>`;
   });
 }
 
@@ -169,4 +178,3 @@ loadOrders();
 
 </body>
 </html>
-  
