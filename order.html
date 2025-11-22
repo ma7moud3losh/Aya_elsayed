@@ -96,30 +96,26 @@ async function sendOrder() {
     return;
   }
 
-  // تجهيز المنتجات
-  const items = cart.map(i => ({
-    id: i.id,
-    name: i.name,
-    price: i.price,
-    qty: i.qty
-  }));
-
-  // حساب الإجمالي
-  const total_price = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
-
   // إجمالي الكمية
-  const quantity = cart.reduce((sum, i) => sum + i.qty, 0);
+  const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
 
-  // إرسال الطلب
-  const { error } = await supabase.from("orders").insert({
+  // إجمالي السعر
+  const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+  // تجهيز البيانات لإدخال صف واحد فقط
+  const orderData = {
     name,
     phone,
     address,
-    items,
-    total_price,
-    quantity,
-    status: "قيد التجهيز"
-  });
+    quantity: totalQty,
+    total_price: totalPrice,
+    status: "pending",
+    items: cart  // JSON
+  };
+
+  const { error } = await supabase
+    .from("orders")
+    .insert(orderData);
 
   if (error) {
     console.log(error);
