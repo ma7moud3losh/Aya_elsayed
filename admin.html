@@ -1,147 +1,126 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8" />
-<title>إدارة الطلبات</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>الطلبات</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<style>
-  body { font-family: "Tajawal", sans-serif; margin: 20px; background:#fafafa }
-  table { width: 100%; border-collapse: collapse; margin-top: 20px; background:white }
-  th, td { padding: 10px; border: 1px solid #ddd; text-align: center; }
-  th { background: #f2f2f2; }
-  select { padding:5px; }
-  .btn { padding: 6px 10px; cursor: pointer; border: none; border-radius: 4px; }
-  .update { background: #4caf50; color: #fff; }
-  .delete { background: #d9534f; color: #fff; }
-  h2{margin:0;padding:10px;background:white;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.06);display:inline-block}
-  .product-item { padding:4px 0; border-bottom:1px dashed #eee; }
-</style>
-
+  <style>
+    body {
+      font-family: "Tajawal", sans-serif;
+      background: #f7f7f7;
+      padding: 20px;
+    }
+    .order-card {
+      background: #fff;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #0001;
+    }
+    select, button {
+      padding: 8px 10px;
+      margin: 5px;
+      border-radius: 6px;
+    }
+  </style>
 </head>
+
 <body>
 
-<h2>📦 إدارة الطلبات</h2>
+  <h2>📦 لوحة إدارة الطلبات</h2>
 
-<table>
-  <thead>
-    <tr>
-      <th>العميل</th>
-      <th>الهاتف</th>
-      <th>العنوان</th>
-      <th>المنتجات</th>
-      <th>الحالة</th>
-      <th>تحديث</th>
-      <th>حذف</th>
-      <th>التاريخ</th>
-    </tr>
-  </thead>
-  <tbody id="orders-table"></tbody>
-</table>
+  <!-- فلترة حسب الحالة -->
+  <label>فلترة حسب الحالة:</label>
+  <select id="statusFilter">
+    <option value="">الكل</option>
+    <option value="pending">قيد التجهيز</option>
+    <option value="shipped">تم الشحن</option>
+    <option value="delivered">تم التسليم</option>
+    <option value="cancelled">ملغي</option>
+  </select>
+  
+  <button onclick="loadOrders()">🔄 تحديث</button>
+
+  <h3 id="count"></h3>
+
+  <div id="orders"></div>
+
 
 <script>
-// ========= ربط Supabase =========
-const supabaseClient = supabase.createClient(
-  "https://qccpddjnozehorhleegz.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjY3BkZGpub3plaG9yaGxlZWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2MTc0NzEsImV4cCI6MjA3OTE5MzQ3MX0.WzG0u9c6wY9eTTh0olIzrPSSPoHhuQhmLTS7zPxXBGA"
-);
+  // اتصال Supabase
+  const supabaseClient = supabase.createClient(
+    "https://qccpddjnozehorhleegz.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjY3BkZGpub3plaG9yaGxlZWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2MTc0NzEsImV4cCI6MjA3OTE5MzQ3MX0.WzG0u9c6wY9eTTh0olIzrPSSPoHhuQhmLTS7zPxXBGA"
+  );
 
+  async function loadOrders() {
+    const filter = document.getElementById("statusFilter").value;
 
-// ========= تحميل الطلبات =========
-async function loadOrders() {
-  const { data, error } = await supabaseClient
-  .from("orders")
-  .select(`
-    *,
-    order_items(
-      quantity,
-      price,
-      products!inner(name)
-    )
-  `)
-  .order("created_at", { ascending: false });
+    let query = supabaseClient
+      .from("orders")
+      .select(`
+        *,
+        order_items (
+          quantity,
+          price,
+          products (name)
+        )
+      `)
+      .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error("خطأ:", error);
-    return;
-  }
-
-  const tbody = document.getElementById("orders-table");
-  tbody.innerHTML = "";
-
-  data.forEach(order => {
-    let productsHtml = "";
-
-    if (Array.isArray(order.order_items)) {
-      productsHtml = order.order_items.map(item => `
-        <div class="product-item">
-          <b>${item.products?.name || "منتج"}</b>
-          — ${item.price} جنيه × ${item.quantity}
-        </div>
-      `).join("");
+    if (filter) {
+      query = query.eq("status", filter); // فلترة حسب الحالة
     }
 
-    tbody.innerHTML += `
-      <tr>
-        <td>${order.name}</td>
-        <td>${order.phone}</td>
-        <td>${order.address}</td>
+    const { data, error } = await query;
 
-        <td>${productsHtml}</td>
+    if (error) {
+      console.error("Error:", error);
+      alert("حدث خطأ أثناء تحميل الطلبات");
+      return;
+    }
 
-        <td>
-          <select onchange="updateStatus('${order.id}', this.value)">
-            <option value="قيد التجهيز" ${order.status === "قيد التجهيز" ? "selected" : ""}>قيد التجهيز</option>
-            <option value="تم الشحن" ${order.status === "تم الشحن" ? "selected" : ""}>تم الشحن</option>
-            <option value="تم التسليم" ${order.status === "تم التسليم" ? "selected" : ""}>تم التسليم</option>
-          </select>
-        </td>
-
-        <td><button class="btn update" onclick="forceUpdate()">✔ حفظ</button></td>
-
-        <td><button class="btn delete" onclick="deleteOrder('${order.id}')">🗑 حذف</button></td>
-
-        <td>${new Date(order.created_at).toLocaleString("ar-EG")}</td>
-      </tr>
-    `;
-  });
-}
-
-
-// ========= تحديث حالة الطلب =========
-async function updateStatus(id, status) {
-  const { error } = await supabaseClient
-    .from("orders")
-    .update({ status })
-    .eq("id", id);
-
-  if (!error) {
-    console.log("تم تحديث الحالة");
+    displayOrders(data);
   }
-}
 
+  function displayOrders(orders) {
+    const container = document.getElementById("orders");
+    container.innerHTML = "";
 
-// ========= زر حفظ التحديث =========
-function forceUpdate() {
-  alert("✔ تم حفظ التحديث بنجاح");
-}
+    document.getElementById("count").innerText = `عدد الطلبات: ${orders.length}`;
 
+    orders.forEach(order => {
+      const card = document.createElement("div");
+      card.className = "order-card";
 
-// ========= حذف طلب =========
-async function deleteOrder(id) {
-  if (!confirm("هل أنت متأكد من حذف هذا الطلب؟")) return;
+      card.innerHTML = `
+        <h3>رقم الطلب: ${order.id}</h3>
+        <p>👤 الاسم: ${order.customer_name}</p>
+        <p>📞 الهاتف: ${order.phone}</p>
+        <p>📍 العنوان: ${order.address}</p>
+        <p>🕒 التاريخ: ${new Date(order.created_at).toLocaleString()}</p>
+        <p>📌 الحالة: <strong>${order.status}</strong></p>
+        <hr>
+        <h4>🛒 المنتجات:</h4>
+        ${
+          order.order_items.map(item => `
+            <p>
+              - ${item.products?.name || "منتج محذوف"}  
+              | الكمية: ${item.quantity}  
+              | السعر: ${item.price} جنيه
+            </p>
+          `).join("")
+        }
+      `;
 
-  await supabaseClient.from("order_items").delete().eq("order_id", id);
-  await supabaseClient.from("orders").delete().eq("id", id);
+      container.appendChild(card);
+    });
+  }
 
   loadOrders();
-}
-
-
-// تحميل الطلبات عند فتح الصفحة
-loadOrders();
-
 </script>
 
 </body>
