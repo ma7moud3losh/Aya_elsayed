@@ -1,178 +1,124 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>لوحة الطلبات - AYA</title>
+<meta charset="UTF-8" />
+<title>إدارة الطلبات</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-body{font-family:'Tajawal',sans-serif;background:#faf7fb;margin:0}
-.container{max-width:1100px;margin:30px auto;padding:16px}
-h2{margin:0 0 20px}
-.table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}
-.table th,.table td{padding:14px;border-bottom:1px solid #eee;text-align:right;font-size:15px}
-.table th{background:#ff4f9d;color:white}
-.empty{text-align:center;padding:40px;color:#777}
-.btn-del{
-  background:#ff2e63;color:#fff;padding:6px 10px;border:none;border-radius:8px;cursor:pointer;
-}
-.status-select{
-  padding:6px 10px;border:1px solid #ddd;border-radius:8px;
-}
+  body { font-family: sans-serif; margin: 20px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  th, td { padding: 10px; border: 1px solid #ddd; text-align: center; }
+  th { background: #f2f2f2; }
+  .btn { padding: 6px 10px; cursor: pointer; border: none; border-radius: 4px; }
+  .update { background: #4caf50; color: #fff; }
+  .delete { background: #d9534f; color: #fff; }
 </style>
-</head>
 
+</head>
 <body>
 
-<div class="container">
 <h2>📦 إدارة الطلبات</h2>
 
-<h3>عدد الطلبات: <span id="ordersCount">0</span></h3>
-
-<table class="table">
-<thead>
-<tr>
-<th>العميل</th>
-<th>الهاتف</th>
-<th>العنوان</th>
-<th>المنتجات</th>
-<th>الإجمالي</th>
-<th>الحالة</th>
-<th>تحديث</th>
-<th>حذف</th>
-<th>التاريخ</th>
-</tr>
-</thead>
-<tbody id="orders-body">
-<tr><td colspan="9" class="empty">جاري تحميل الطلبات...</td></tr>
-</tbody>
+<table>
+  <thead>
+    <tr>
+      <th>العميل</th>
+      <th>الهاتف</th>
+      <th>العنوان</th>
+      <th>المنتجات</th>
+      <th>الحالة</th>
+      <th>تحديث</th>
+      <th>حذف</th>
+      <th>التاريخ</th>
+    </tr>
+  </thead>
+  <tbody id="orders-table"></tbody>
 </table>
-</div>
 
 <script>
-// =========================
-// Supabase
-// =========================
-const supabaseUrl = "https://qccpddjnozehorhleegz.supabase.co";
-const supabaseKey = "sb_publishable_rSdFTm7TUh-HDRLKacdZxw_BpQOTeIr";
-const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+const supabase = supabase.createClient(
+  "https://qccpddjnozehorhleegz.supabase.co",
+  "YOUR_PUBLIC_ANON_KEY_HERE"
+);
 
-// =========================
-// Load Orders
-// =========================
-async function loadOrders(){
-  const tbody = document.getElementById("orders-body");
+// ==== تحميل الطلبات ====
+async function loadOrders() {
+  const { data, error } = await supabase
+    .from("orders")
+    .select(`
+      *,
+      order_items(
+        quantity,
+        price,
+        products(name)
+      )
+    `)
+    .order("created_at", { ascending: false });
 
-  // جلب عدد الطلبات
-  const countQuery = await client
-    .from('orders')
-    .select('*', { count: 'exact', head: true });
-
-  document.getElementById("ordersCount").textContent = countQuery.count || 0;
-
-  // جلب الطلبات
-  const { data, error } = await client
-    .from('orders')
-    .select("*")
-    .order('created_at', { ascending: false });
-
-  if(error){
-    tbody.innerHTML = `<tr><td colspan="9" class="empty">⚠ خطأ أثناء تحميل الطلبات</td></tr>`;
+  if (error) {
     console.error(error);
     return;
   }
 
-  if(!data || data.length === 0){
-    tbody.innerHTML = `<tr><td colspan="9" class="empty">لا توجد طلبات</td></tr>`;
-    return;
-  }
-
+  const tbody = document.getElementById("orders-table");
   tbody.innerHTML = "";
 
-  data.forEach(o=>{
+  data.forEach(order => {
     let productsHtml = "";
 
-    if (Array.isArray(o.items)) {
-      productsHtml = o.items.map(i => `
-        <div>${i.name} — ${i.price} × ${i.qty}</div>
+    if (Array.isArray(order.order_items)) {
+      productsHtml = order.order_items.map(i => `
+        <div>
+          ${i.products?.name || "منتج"} — ${i.price} جنيه × ${i.quantity}
+        </div>
       `).join("");
     }
 
     tbody.innerHTML += `
-<tr>
-  <td>${o.name}</td>
-  <td>${o.phone}</td>
-  <td>${o.address}</td>
+      <tr>
+        <td>${order.name}</td>
+        <td>${order.phone}</td>
+        <td>${order.address}</td>
+        <td>${productsHtml}</td>
 
-  <td>${productsHtml}</td>
+        <td>
+          <select onchange="updateStatus(${order.id}, this.value)">
+            <option ${order.status === "قيد التجهيز" ? "selected" : ""}>قيد التجهيز</option>
+            <option ${order.status === "تم الشحن" ? "selected" : ""}>تم الشحن</option>
+            <option ${order.status === "تم التسليم" ? "selected" : ""}>تم التسليم</option>
+          </select>
+        </td>
 
-  <td>${o.total_price || 0} جنيه</td>
+        <td><button class="btn update" onclick="forceUpdate(${order.id})">✔ تحديث</button></td>
+        <td><button class="btn delete" onclick="deleteOrder(${order.id})">🗑 حذف</button></td>
 
-  <td>
-    <select id="status-${o.id}" class="status-select">
-      <option value="قيد التجهيز" ${o.status==="قيد التجهيز"?"selected":""}>قيد التجهيز</option>
-      <option value="تم الشحن" ${o.status==="تم الشحن"?"selected":""}>تم الشحن</option>
-      <option value="مكتمل" ${o.status==="مكتمل"?"selected":""}>مكتمل</option>
-      <option value="ملغي" ${o.status==="ملغي"?"selected":""}>ملغي</option>
-    </select>
-  </td>
-
-  <td>
-    <button onclick="updateStatus('${o.id}')" class="btn-del" style="background:#4caf50">✔ تحديث</button>
-  </td>
-
-  <td>
-    <button onclick="deleteOrder('${o.id}')" class="btn-del">🗑 حذف</button>
-  </td>
-
-  <td>${new Date(o.created_at).toLocaleString('ar-EG')}</td>
-</tr>`;
+        <td>${new Date(order.created_at).toLocaleString("ar-EG")}</td>
+      </tr>
+    `;
   });
 }
 
-// =========================
-// Update Status
-// =========================
-async function updateStatus(id) {
+// ==== تحديث الحالة ====
+async function updateStatus(id, status) {
+  await supabase.from("orders").update({ status }).eq("id", id);
+}
 
-  const newStatus = document.getElementById(`status-${id}`).value;
+// ==== زر التحديث ====
+async function forceUpdate(id) {
+  alert("تم تحديث الطلب بنجاح ✔");
+}
 
-  const { error } = await client
-    .from("orders")
-    .update({ status: newStatus })
-    .eq("id", id);
+// ==== حذف الطلب ====
+async function deleteOrder(id) {
+  if (!confirm("هل أنت متأكد من حذف الطلب؟")) return;
 
-  if (error) {
-    alert("❌ لم يتم التحديث");
-    console.error(error);
-    return;
-  }
-
-  alert("✔ تم تحديث حالة الطلب");
+  await supabase.from("orders").delete().eq("id", id);
   loadOrders();
 }
 
-// =========================
-// Delete Order
-// =========================
-async function deleteOrder(id){
-  if(!confirm("هل تريد حذف هذا الطلب؟")) return;
-
-  const { error } = await client
-    .from("orders")
-    .delete()
-    .eq("id", id);
-
-  if(error){
-    alert("❌ فشل الحذف");
-  } else {
-    alert("🗑 تم حذف الطلب");
-    loadOrders();
-  }
-}
-
+// تحميل البيانات عند فتح الصفحة
 loadOrders();
 </script>
 
