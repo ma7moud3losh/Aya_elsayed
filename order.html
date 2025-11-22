@@ -44,17 +44,11 @@ input,textarea{
 </div>
 
 <script>
-// ===============================
-// Supabase Connection
-// ===============================
 const supabase = window.supabase.createClient(
   "https://qccpddjnozehorhleegz.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjY3BkZGpub3plaG9yaGxlZWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2MTc0NzEsImV4cCI6MjA3OTE5MzQ3MX0.WzG0u9c6wY9eTTh0olIzrPSSPoHhuQhmLTS7zPxXBGA" // ضعي المفتاح الجديد لو تغير
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjY3BkZGpub3plaG9yaGxlZWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2MTc0NzEsImV4cCI6MjA3OTE5MzQ3MX0.WzG0u9c6wY9eTTh0olIzrPSSPoHhuQhmLTS7zPxXBGA"
 );
 
-// ===============================
-// تحميل السلة في صفحة إتمام الطلب
-// ===============================
 function loadCartForOrder() {
   let cart = JSON.parse(localStorage.getItem("cart")) || [];
   let box = document.getElementById("cartItems");
@@ -80,7 +74,7 @@ function loadCartForOrder() {
 loadCartForOrder();
 
 // ===============================
-// إرسال الطلب
+// إرسال الطلب (الكود الصحيح)
 // ===============================
 async function sendOrder() {
   const name = document.getElementById("name").value.trim();
@@ -92,27 +86,27 @@ async function sendOrder() {
     return;
   }
 
-  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  const cart = JSON.parse(localStorage.getItem("cart")) || [];
   if (cart.length === 0) {
     alert("السلة فارغة!");
     return;
   }
 
-  // حساب الإجمالي
-  const totalPrice = cart.reduce((t, x) => t + (x.price * x.qty), 0);
+  const totalPrice = cart.reduce((t, x) => t + x.price * x.qty, 0);
 
-  // 1) إنشاء الطلب الرئيسي (orders)
-  const { data: order, error: orderError } = await supabase
+  // 1) إنشاء الطلب الأساسي
+  const { data: orderData, error: orderError } = await supabase
     .from("orders")
-    .insert({
-      name,
-      phone,
-      address,
-      total_price: totalPrice,
-      status: "قيد التجهيز"
-    })
-    .select()
-    .single();
+    .insert([
+      {
+        name,
+        phone,
+        address,
+        total: totalPrice,
+        status: "قيد التجهيز"
+      }
+    ])
+    .select();
 
   if (orderError) {
     console.error(orderError);
@@ -120,12 +114,12 @@ async function sendOrder() {
     return;
   }
 
-  const orderId = order.id;
+  const orderId = orderData[0].id;
 
-  // 2) إنشاء صفوف order_items
+  // 2) إنشاء العناصر المرتبطة بالطلب
   const itemsRows = cart.map(item => ({
     order_id: orderId,
-    product_id: item.id,   // مهم: UUID
+    product_id: item.id,
     quantity: item.qty,
     price: item.price
   }));
@@ -145,8 +139,8 @@ async function sendOrder() {
   alert("تم إرسال طلبك بنجاح ❤️");
   location.href = "index.html";
 }
-
 </script>
+
 
 </body>
 </html>
