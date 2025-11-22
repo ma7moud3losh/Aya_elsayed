@@ -46,26 +46,6 @@ const supabaseClient = supabase.createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjY3BkZGpub3plaG9yaGxlZWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2MTc0NzEsImV4cCI6MjA3OTE5MzQ3MX0.WzG0u9c6wY9eTTh0olIzrPSSPoHhuQhmLTS7zPxXBGA"
 );
 
-async function loadOrders() {
-  const { data, error } = await supabaseClient
-    .from("orders")
-    .select(`
-      *,
-      order_items (
-        *,
-        products ( name )
-      )
-    `)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error(error);
-    return;
-  }
-
-  console.log(data);
-}
-
 
 // ========= تحميل الطلبات =========
 async function loadOrders() {
@@ -129,23 +109,39 @@ async function loadOrders() {
   });
 }
 
+
 // ========= تحديث حالة الطلب =========
 async function updateStatus(id, status) {
-  await supabaseClient.from("orders").update({ status }).eq("id", id);
+  const { error } = await supabaseClient
+    .from("orders")
+    .update({ status })
+    .eq("id", id);
+
+  if (!error) {
+    console.log("تم التحديث");
+  }
 }
+
 
 // ========= زر حفظ التحديث =========
 function forceUpdate() {
   alert("✔ تم حفظ التحديث بنجاح");
 }
 
+
 // ========= حذف طلب =========
 async function deleteOrder(id) {
   if (!confirm("هل أنت متأكد من حذف هذا الطلب؟")) return;
 
+  // حذف order_items أولًا
+  await supabaseClient.from("order_items").delete().eq("order_id", id);
+
+  // بعد كده حذف order
   await supabaseClient.from("orders").delete().eq("id", id);
+
   loadOrders();
 }
+
 
 // تحميل الطلبات عند فتح الصفحة
 loadOrders();
