@@ -7,7 +7,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 
 <style>
-body{font-family:'Tajawal';background:#faf7fb;margin:0;padding:20px;color:#333}
+body{
+  font-family:'Tajawal';
+  background:#faf7fb;
+  margin:0;
+  padding:20px;
+  color:#333;
+}
 h2{text-align:center;margin-bottom:20px}
 
 .cart-item{
@@ -25,15 +31,25 @@ h2{text-align:center;margin-bottom:20px}
 .info{flex:1}
 .qty{
   display:flex;
-  gap:6px;
+  gap:8px;
   align-items:center;
   margin:8px 0;
 }
 .qty button{
-  width:28px;height:28px;font-weight:bold;border:none;background:#ff4f9d;color:#fff;border-radius:6px;cursor:pointer;
+  width:28px;height:28px;
+  font-weight:bold;
+  border:none;
+  background:#ff4f9d;
+  color:#fff;
+  border-radius:6px;
+  cursor:pointer;
 }
 .remove-btn{
-  background:#ddd;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;
+  background:#ddd;
+  border:none;
+  padding:6px 12px;
+  border-radius:6px;
+  cursor:pointer;
 }
 .total-box{
   margin-top:20px;
@@ -66,6 +82,10 @@ h2{text-align:center;margin-bottom:20px}
 <button class="checkout-btn" onclick="goCheckout()">إتمام الطلب</button>
 
 <script>
+
+// ===============================
+// تحميل السلة
+// ===============================
 function loadCart(){
   let cart = JSON.parse(localStorage.getItem("cart")) || [];
   const box = document.getElementById("cart-list");
@@ -79,14 +99,17 @@ function loadCart(){
 
   box.innerHTML = "";
   cart.forEach((item, i)=>{
-    total += item.qty * item.price;
+
+    // تأكد أن السعر رقم وليس نص
+    const price = Number(item.price) || 0;
+    total += price * item.qty;
 
     box.innerHTML += `
       <div class="cart-item">
         <img src="${item.image}">
         <div class="info">
           <h4>${item.name}</h4>
-          <p>${item.price} جنيه</p>
+          <p>${price} جنيه</p>
 
           <div class="qty">
             <button onclick="changeQty(${i}, 1)">+</button>
@@ -103,14 +126,22 @@ function loadCart(){
   document.getElementById("total").innerHTML = total;
 }
 
+// ===============================
+// زيادة/نقص الكمية
+// ===============================
 function changeQty(i, change){
   let cart = JSON.parse(localStorage.getItem("cart")) || [];
   cart[i].qty += change;
+
   if(cart[i].qty <= 0) cart.splice(i,1);
+
   localStorage.setItem("cart", JSON.stringify(cart));
   loadCart();
 }
 
+// ===============================
+// حذف عنصر
+// ===============================
 function removeItem(i){
   let cart = JSON.parse(localStorage.getItem("cart")) || [];
   cart.splice(i,1);
@@ -118,6 +149,9 @@ function removeItem(i){
   loadCart();
 }
 
+// ===============================
+// الانتقال لصفحة إتمام الطلب
+// ===============================
 function goCheckout(){
   let cart = JSON.parse(localStorage.getItem("cart")) || [];
   if(cart.length === 0){

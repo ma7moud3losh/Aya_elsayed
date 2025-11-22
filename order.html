@@ -49,11 +49,11 @@ input,textarea{
 // ===============================
 const supabase = window.supabase.createClient(
   "https://qccpddjnozehorhleegz.supabase.co",
-  "sb_publishable_rSdFTm7TUh-HDRLKacdZxw_BpQOTeIr"
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjY3BkZGpub3plaG9yaGxlZWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2MTc0NzEsImV4cCI6MjA3OTE5MzQ3MX0.WzG0u9c6wY9eTTh0olIzrPSSPoHhuQhmLTS7zPxXBGA" // ضعي المفتاح الجديد لو تغير
 );
 
 // ===============================
-// تحميل السلة داخل صفحة الطلب
+// تحميل السلة في صفحة إتمام الطلب
 // ===============================
 function loadCartForOrder() {
   let cart = JSON.parse(localStorage.getItem("cart")) || [];
@@ -80,7 +80,7 @@ function loadCartForOrder() {
 loadCartForOrder();
 
 // ===============================
-// إرسال الطلب وإنشاء order + order_items
+// إرسال الطلب
 // ===============================
 async function sendOrder() {
   const name = document.getElementById("name").value.trim();
@@ -101,7 +101,7 @@ async function sendOrder() {
   // حساب الإجمالي
   const totalPrice = cart.reduce((t, x) => t + (x.price * x.qty), 0);
 
-  // 1) إنشاء صف order رئيسي
+  // 1) إنشاء الطلب الرئيسي (orders)
   const { data: order, error: orderError } = await supabase
     .from("orders")
     .insert({
@@ -109,8 +109,7 @@ async function sendOrder() {
       phone,
       address,
       total_price: totalPrice,
-      status: "قيد التجهيز",
-      created_at: new Date().toISOString()
+      status: "قيد التجهيز"
     })
     .select()
     .single();
@@ -123,15 +122,14 @@ async function sendOrder() {
 
   const orderId = order.id;
 
-  // 2) تجهيز صفوف order_items
+  // 2) إنشاء صفوف order_items
   const itemsRows = cart.map(item => ({
     order_id: orderId,
-    product_id: item.id,
+    product_id: item.id,   // مهم: UUID
     quantity: item.qty,
     price: item.price
   }));
 
-  // 3) إدخال المنتجات المرتبطة بالطلب
   const { error: itemsError } = await supabase
     .from("order_items")
     .insert(itemsRows);
@@ -142,7 +140,7 @@ async function sendOrder() {
     return;
   }
 
-  // 4) إنهاء الطلب
+  // 3) إنهاء العملية
   localStorage.removeItem("cart");
   alert("تم إرسال طلبك بنجاح ❤️");
   location.href = "index.html";

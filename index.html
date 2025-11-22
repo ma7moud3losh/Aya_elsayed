@@ -8,7 +8,7 @@
 <!-- خط Tajawal -->
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 
-<!-- مكتبة Supabase (مهم جداً) -->
+<!-- مكتبة Supabase -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
@@ -31,7 +31,7 @@ body{
   justify-content:space-between;
   align-items:center;
   padding:14px 20px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  box-shadow:0 2px 10px rgba(0,0,0,0.06);
   position:sticky;
   top:0;
   z-index:10;
@@ -78,57 +78,10 @@ body{
 .btn-buy{background:var(--pink);color:white;}
 .btn-add{background:transparent;border:1px solid #eee;color:#333}
 
-/* cart modal */
-.cart-modal {
-  display: none;
-  position: fixed;
-  z-index: 999;
-  left: 0; top: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.6);
-  justify-content: center;
-  align-items: center;
-}
-.cart-content {
-  background: #fff;
-  width: 350px;
-  padding: 20px;
-  border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.4);
-  animation: showCart .3s ease;
-}
-.close {
-  float: left;
-  cursor: pointer;
-  font-size: 28px;
-  font-weight: bold;
-}
-#cart-items {
-  max-height: 300px;
-  overflow-y: auto;
-  margin: 15px 0;
-}
-.order-btn {
-  display: block;
-  background: #ff3b77;
-  color: #fff;
-  text-decoration: none;
-  padding: 10px;
-  border-radius: 10px;
-  margin-top: 10px;
-}
-
-@keyframes showCart {
-  from { transform: scale(0.7); opacity: 0; }
-  to   { transform: scale(1); opacity: 1; }
-}
-
 .footer{margin:40px 0;text-align:center;color:#777}
 </style>
 </head>
 <body>
-
-
 
 <header class="header">
   <div style="display:flex;align-items:center;gap:12px">
@@ -137,7 +90,7 @@ body{
   </div>
 
   <nav class="nav">
-<a class="cart-btn" href="cart.html">🛒 السلة</a>
+    <a class="cart-btn" href="cart.html">🛒 السلة</a>
   </nav>
 </header>
 
@@ -154,8 +107,8 @@ body{
     </div>
   </section>
 
-  <div id="products" class="products" style="min-height:120px;">
-    <!-- المنتجات سوف تظهر هنا -->
+  <div id="products" class="products">
+    <!-- المنتجات هنا -->
   </div>
 
   <div class="footer">© جميع الحقوق محفوظة — AYA ELSAYED</div>
@@ -163,12 +116,12 @@ body{
 </main>
 
 <script>
-// --- Supabase ---
+// ===== Supabase Connect =====
 const supabaseUrl = "https://qccpddjnozehorhleegz.supabase.co";
 const supabaseKey = "sb_publishable_rSdFTm7TUh-HDRLKacdZxw_BpQOTeIr";
 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-// تحميل المنتجات
+// ===== تحميل المنتجات =====
 async function loadProducts(){
   const box = document.getElementById("products");
   box.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:30px;color:#777">جاري تحميل المنتجات...</div>`;
@@ -179,20 +132,19 @@ async function loadProducts(){
     .order("created_at", { ascending:false });
 
   if(error){
-    console.error(error);
-    box.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#c00;padding:20px">حدث خطأ أثناء تحميل المنتجات</div>`;
+    box.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#c00;padding:20px">خطأ في تحميل المنتجات</div>`;
     return;
   }
 
-  if(!data || data.length===0){
-    box.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:#777">لا توجد منتجات بعد</div>`;
+  if(!data || data.length === 0){
+    box.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:#777">لا توجد منتجات</div>`;
     return;
   }
 
   box.innerHTML = "";
 
   data.forEach(p => {
-    const html = `
+    box.innerHTML += `
       <div class="card">
         <img src="${p.image}" alt="${p.name}">
         <h3>${p.name}</h3>
@@ -200,81 +152,39 @@ async function loadProducts(){
         <p style="color:#666;font-size:14px;min-height:40px">${p.description || ''}</p>
 
         <div class="actions">
-<button class="btn btn-buy" onclick="addToCart('${p.id}', '${p.name}', ${p.price}, '${p.image}')">أضف للسلة</button>
+          <button class="btn btn-buy"
+            onclick="addToCart('${p.id}', '${p.name}', ${Number(p.price)}, '${p.image}')">
+            أضف للسلة
+          </button>
         </div>
       </div>
     `;
-    box.innerHTML += html;
   });
 }
 
-function addToCart(id, name, price, image) {
-    let cart = JSON.parse(localStorage.getItem("cart")) || [];
-
-    // لو المنتج موجود نزود الكمية
-    const index = cart.findIndex(item => item.id === id);
-    if (index !== -1) {
-        cart[index].qty++;
-    } else {
-        cart.push({
-            id,
-            name,
-            price,
-            image,
-            qty: 1
-        });
-    }
-
-    localStorage.setItem("cart", JSON.stringify(cart));
-    alert("تمت إضافة المنتج إلى السلة!");
-    loadCart();
-}
-
-function order(id){
-  location.href = `order.html?product=${id}`;
-}
-
-// السلة
-function toggleCart(){
-  const modal = document.getElementById("cartModal");
-  modal.style.display = modal.style.display === "flex" ? "none" : "flex";
-}
-
-function loadCart(){
+// ===== إضافة للسلة =====
+function addToCart(id, name, price, image){
   let cart = JSON.parse(localStorage.getItem("cart")) || [];
-  const container = document.getElementById("cart-items");
-  const totalPrice = document.getElementById("totalPrice");
 
-  container.innerHTML = "";
-  let total = 0;
+  const exist = cart.findIndex(i => i.id === id);
 
-  cart.forEach((item,i)=>{
-    total += item.price * item.qty;
+  if(exist !== -1){
+    cart[exist].qty++;
+  } else {
+    cart.push({
+      id,
+      name,
+      price: Number(price),
+      image,
+      qty: 1
+    });
+  }
 
-    container.innerHTML += `
-      <div style="margin-bottom:10px">
-        <strong>${item.name}</strong>
-        <p>${item.price} جنيه × ${item.qty}</p>
-        <button onclick="removeFromCart(${i})">حذف</button>
-        <hr>
-      </div>
-    `;
-  });
-
-  totalPrice.innerText = total;
-}
-
-function removeFromCart(i){
-  let cart = JSON.parse(localStorage.getItem("cart")) || [];
-  cart.splice(i,1);
   localStorage.setItem("cart", JSON.stringify(cart));
-  loadCart();
+  alert("تمت إضافة المنتج إلى السلة ❤️");
 }
 
-window.onload = function(){
-  loadProducts();
-  loadCart();
-};
+window.onload = loadProducts;
 </script>
 
 </body>

@@ -7,13 +7,15 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-  body { font-family: sans-serif; margin: 20px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  body { font-family: "Tajawal", sans-serif; margin: 20px; background:#fafafa }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; background:white }
   th, td { padding: 10px; border: 1px solid #ddd; text-align: center; }
   th { background: #f2f2f2; }
+  select { padding:5px; }
   .btn { padding: 6px 10px; cursor: pointer; border: none; border-radius: 4px; }
   .update { background: #4caf50; color: #fff; }
   .delete { background: #d9534f; color: #fff; }
+  h2{margin:0;padding:10px;background:white;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.06);display:inline-block}
 </style>
 
 </head>
@@ -38,27 +40,30 @@
 </table>
 
 <script>
-const supabase = supabase.createClient(
+// ========= ربط Supabase =========
+const supabaseClient = supabase.createClient(
   "https://qccpddjnozehorhleegz.supabase.co",
-  "YOUR_PUBLIC_ANON_KEY_HERE"
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjY3BkZGpub3plaG9yaGxlZWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2MTc0NzEsImV4cCI6MjA3OTE5MzQ3MX0.WzG0u9c6wY9eTTh0olIzrPSSPoHhuQhmLTS7zPxXBGA"
 );
 
-// ==== تحميل الطلبات ====
+// ========= تحميل الطلبات =========
 async function loadOrders() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from("orders")
     .select(`
       *,
       order_items(
         quantity,
         price,
-        products(name)
+        products(
+          name
+        )
       )
     `)
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error(error);
+    console.error("خطأ:", error);
     return;
   }
 
@@ -69,11 +74,13 @@ async function loadOrders() {
     let productsHtml = "";
 
     if (Array.isArray(order.order_items)) {
-      productsHtml = order.order_items.map(i => `
-        <div>
-          ${i.products?.name || "منتج"} — ${i.price} جنيه × ${i.quantity}
-        </div>
-      `).join("");
+      productsHtml = order.order_items
+        .map(item => `
+          <div>
+            ${item.products?.name || "منتج"} — ${item.price} جنيه × ${item.quantity}
+          </div>
+        `)
+        .join("");
     }
 
     tbody.innerHTML += `
@@ -81,17 +88,18 @@ async function loadOrders() {
         <td>${order.name}</td>
         <td>${order.phone}</td>
         <td>${order.address}</td>
+
         <td>${productsHtml}</td>
 
         <td>
           <select onchange="updateStatus(${order.id}, this.value)">
-            <option ${order.status === "قيد التجهيز" ? "selected" : ""}>قيد التجهيز</option>
-            <option ${order.status === "تم الشحن" ? "selected" : ""}>تم الشحن</option>
-            <option ${order.status === "تم التسليم" ? "selected" : ""}>تم التسليم</option>
+            <option value="قيد التجهيز" ${order.status === "قيد التجهيز" ? "selected" : ""}>قيد التجهيز</option>
+            <option value="تم الشحن" ${order.status === "تم الشحن" ? "selected" : ""}>تم الشحن</option>
+            <option value="تم التسليم" ${order.status === "تم التسليم" ? "selected" : ""}>تم التسليم</option>
           </select>
         </td>
 
-        <td><button class="btn update" onclick="forceUpdate(${order.id})">✔ تحديث</button></td>
+        <td><button class="btn update" onclick="forceUpdate()">✔ حفظ</button></td>
         <td><button class="btn delete" onclick="deleteOrder(${order.id})">🗑 حذف</button></td>
 
         <td>${new Date(order.created_at).toLocaleString("ar-EG")}</td>
@@ -100,26 +108,27 @@ async function loadOrders() {
   });
 }
 
-// ==== تحديث الحالة ====
+// ========= تحديث حالة الطلب =========
 async function updateStatus(id, status) {
-  await supabase.from("orders").update({ status }).eq("id", id);
+  await supabaseClient.from("orders").update({ status }).eq("id", id);
 }
 
-// ==== زر التحديث ====
-async function forceUpdate(id) {
-  alert("تم تحديث الطلب بنجاح ✔");
+// ========= زر حفظ التحديث =========
+function forceUpdate() {
+  alert("✔ تم حفظ التحديث بنجاح");
 }
 
-// ==== حذف الطلب ====
+// ========= حذف طلب =========
 async function deleteOrder(id) {
-  if (!confirm("هل أنت متأكد من حذف الطلب؟")) return;
+  if (!confirm("هل أنت متأكد من حذف هذا الطلب؟")) return;
 
-  await supabase.from("orders").delete().eq("id", id);
+  await supabaseClient.from("orders").delete().eq("id", id);
   loadOrders();
 }
 
-// تحميل البيانات عند فتح الصفحة
+// تحميل الطلبات عند فتح الصفحة
 loadOrders();
+
 </script>
 
 </body>

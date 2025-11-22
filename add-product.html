@@ -85,7 +85,7 @@ textarea{min-height:120px;resize:vertical}
 
   </div>
 
-  <!-- قائمة المنتجات + زرار الحذف -->
+  <!-- قائمة المنتجات -->
   <div class="product-list" id="productList">
     <h3 style="margin-bottom:12px;">جميع المنتجات</h3>
     <div id="products"></div>
@@ -126,24 +126,48 @@ async function addProduct(){
 
   const fileName=Date.now()+"_"+selectedFile.name.replace(/\s+/g,"_");
 
-  const {error:uploadErr}=await supabase.storage.from("products").upload(fileName,selectedFile);
-  if(uploadErr){alert("خطأ برفع الصورة");return;}
+  // رفع الصورة
+  const {error:uploadErr}=await supabase
+    .storage
+    .from("products")
+    .upload(fileName,selectedFile);
 
-  const imageUrl=supabase.storage.from("products").getPublicUrl(fileName).data.publicUrl;
+  if(uploadErr){
+    alert("خطأ أثناء رفع الصورة");
+    return;
+  }
 
-  await supabase.from("products").insert({name,price,description,image:imageUrl});
-  alert("تم حفظ المنتج");
+  // رابط الصورة
+  const imageUrl=supabase
+    .storage
+    .from("products")
+    .getPublicUrl(fileName).data.publicUrl;
+
+  // حفظ المنتج في قاعدة البيانات
+  await supabase
+    .from("products")
+    .insert({name,price,description,image:imageUrl});
+
+  alert("✔ تم حفظ المنتج");
+
+  // إعادة تحميل القائمة
   loadProducts();
 }
 
 // تحميل المنتجات
 async function loadProducts(){
   const productsBox=document.getElementById("products");
-  productsBox.innerHTML="تحميل...";
+  productsBox.innerHTML="جاري التحميل...";
 
-  const {data,error}=await supabase.from("products").select("*").order("created_at",{ascending:false});
+  const {data,error}=await supabase
+    .from("products")
+    .select("*")
+    .order("created_at",{ascending:false});
   
-  if(error){productsBox.innerHTML="خطأ";return;}
+  if(error){
+    productsBox.innerHTML="حدث خطأ";
+    return;
+  }
 
   productsBox.innerHTML = data.map(p=>`
     <div class="product-item">
@@ -157,38 +181,21 @@ async function loadProducts(){
 async function deleteProduct(id, imageUrl) {
   if (!confirm("هل تريد حذف المنتج؟")) return;
 
-  // استخراج مسار الصورة الصحيح من الرابط
+  // استخراج اسم ملف الصورة
   const path = imageUrl.split("/storage/v1/object/public/products/")[1];
 
   if (path) {
-    // حذف الصورة من ستورج
-    const { error: removeErr } = await supabase.storage
-      .from("products")
-      .remove([path]);
-
-    if (removeErr) {
-      console.log(removeErr);
-      alert("لم يتم حذف الصورة من التخزين");
-    }
+    await supabase.storage.from("products").remove([path]);
   }
 
-  // حذف صف المنتج من جدول البيانات
-  const { error } = await supabase
-    .from("products")
-    .delete()
-    .eq("id", id);
+  await supabase.from("products").delete().eq("id", id);
 
-  if (error) {
-    console.log(error);
-    alert("حدث خطأ أثناء حذف المنتج");
-    return;
-  }
+  alert("✔ تم حذف المنتج");
 
-  alert("تم حذف المنتج بنجاح");
   loadProducts();
 }
 
-
+// تشغيل أول تحميل
 loadProducts();
 
 </script>
